@@ -29,6 +29,52 @@ static void hexify(char *out, unsigned char *byte, size_t len)
     out[len * 3] = '\0';
 }
 
+static void check_pkey(const char *key_type, EVP_PKEY *pubkey, EVP_PKEY *privkey)
+{
+    /* check we can get pub params from key */
+    if (strcmp(key_type, "RSA") == 0) {
+        BIGNUM *tmp = NULL;
+        int ret;
+
+        ret = EVP_PKEY_get_bn_param(pubkey, OSSL_PKEY_PARAM_RSA_E, &tmp);
+        if (ret != 1) {
+            fprintf(stderr, "Failed to get E param from public key\n");
+            exit(EXIT_FAILURE);
+        } else {
+            BN_free(tmp);
+            tmp = NULL;
+        }
+        ret = EVP_PKEY_get_bn_param(pubkey, OSSL_PKEY_PARAM_RSA_N, &tmp);
+        if (ret != 1) {
+            fprintf(stderr, "Failed to get N param from public key\n");
+            exit(EXIT_FAILURE);
+        } else {
+            BN_free(tmp);
+            tmp = NULL;
+        }
+    } else if (strcmp(key_type, "EC") == 0) {
+        BIGNUM *tmp = NULL;
+        int ret;
+
+        ret = EVP_PKEY_get_bn_param(pubkey, OSSL_PKEY_PARAM_EC_PUB_X, &tmp);
+        if (ret != 1) {
+            fprintf(stderr, "Failed to get X param from public key\n");
+            exit(EXIT_FAILURE);
+        } else {
+            BN_free(tmp);
+            tmp = NULL;
+        }
+        ret = EVP_PKEY_get_bn_param(pubkey, OSSL_PKEY_PARAM_EC_PUB_Y, &tmp);
+        if (ret != 1) {
+            fprintf(stderr, "Failed to get Y param from public key\n");
+            exit(EXIT_FAILURE);
+        } else {
+            BN_free(tmp);
+            tmp = NULL;
+        }
+    }
+}
+
 static void check_keys(OSSL_STORE_CTX *store, const char *key_type)
 {
     OSSL_STORE_INFO *info;
@@ -68,48 +114,7 @@ static void check_keys(OSSL_STORE_CTX *store, const char *key_type)
         exit(EXIT_FAILURE);
     }
 
-    /* check we can get pub params from key */
-    if (strcmp(key_type, "RSA") == 0) {
-        BIGNUM *tmp = NULL;
-        int ret;
-
-        ret = EVP_PKEY_get_bn_param(pubkey, OSSL_PKEY_PARAM_RSA_E, &tmp);
-        if (ret != 1) {
-            fprintf(stderr, "Failed to get E param from public key");
-            exit(EXIT_FAILURE);
-        } else {
-            BN_free(tmp);
-            tmp = NULL;
-        }
-        ret = EVP_PKEY_get_bn_param(pubkey, OSSL_PKEY_PARAM_RSA_N, &tmp);
-        if (ret != 1) {
-            fprintf(stderr, "Failed to get N param from public key");
-            exit(EXIT_FAILURE);
-        } else {
-            BN_free(tmp);
-            tmp = NULL;
-        }
-    } else if (strcmp(key_type, "EC") == 0) {
-        BIGNUM *tmp = NULL;
-        int ret;
-
-        ret = EVP_PKEY_get_bn_param(pubkey, OSSL_PKEY_PARAM_EC_PUB_X, &tmp);
-        if (ret != 1) {
-            fprintf(stderr, "Failed to get X param from public key");
-            exit(EXIT_FAILURE);
-        } else {
-            BN_free(tmp);
-            tmp = NULL;
-        }
-        ret = EVP_PKEY_get_bn_param(pubkey, OSSL_PKEY_PARAM_EC_PUB_Y, &tmp);
-        if (ret != 1) {
-            fprintf(stderr, "Failed to get Y param from public key");
-            exit(EXIT_FAILURE);
-        } else {
-            BN_free(tmp);
-            tmp = NULL;
-        }
-    }
+    check_pkey(key_type, pubkey, privkey);
 
     EVP_PKEY_free(privkey);
     EVP_PKEY_free(pubkey);
@@ -144,6 +149,7 @@ static void gen_keys(const char *key_type, const char *label, unsigned char *id,
         fprintf(stderr, "Failed to generate key\n");
         exit(EXIT_FAILURE);
     }
+    check_pkey(key_type, key, key);
 
     EVP_PKEY_free(key);
     key = NULL;
